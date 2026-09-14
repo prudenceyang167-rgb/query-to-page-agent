@@ -1,0 +1,3 @@
+route,page_type,indexable,primary_intent
+/,homepage,true,product overview
+/blog/what-is-a-prd,blog,true,prd education

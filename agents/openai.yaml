@@ -1,0 +1,5 @@
+interface:
+  display_name: "Query-to-Page Agent"
+  short_description: "Prioritize queries and ship gated page batches"
+  brand_color: "#26344B"
+  default_prompt: "Use $ojo-query-to-page-agent to turn this query bank into a gated batch of 3–5 high-intent pages."

@@ -1,0 +1,15 @@
+{
+  "run_name": "synthetic-high-intent-use-cases",
+  "batch_size": 3,
+  "target_repository": ".",
+  "inputs": {
+    "icp": "inputs/icp.md",
+    "query_bank": "inputs/query-bank.csv",
+    "product_capabilities": "inputs/product-capabilities.md",
+    "sitemap": "inputs/sitemap.csv",
+    "use_case_taxonomy": "inputs/use-cases.md",
+    "page_skill": "inputs/page-skill.md",
+    "design_system": "inputs/design-system.md",
+    "seo_rules": "inputs/seo-rules.md"
+  }
+}

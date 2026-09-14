@@ -1,0 +1,4 @@
+query,market,language,volume,difficulty,source,notes
+ai prd to ui generator,US,en,,,synthetic-example,Replace with validated source data
+turn prd into interactive prototype,US,en,,,synthetic-example,Replace with validated source data
+ai product requirement analysis,US,en,,,synthetic-example,Replace with validated source data

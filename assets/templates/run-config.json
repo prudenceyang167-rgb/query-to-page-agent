@@ -1,0 +1,15 @@
+{
+  "run_name": "YYYY-MM-high-intent-use-cases",
+  "batch_size": 3,
+  "target_repository": "/absolute/path/to/site-repository",
+  "inputs": {
+    "icp": "inputs/icp.md",
+    "query_bank": "inputs/query-bank.csv",
+    "product_capabilities": "inputs/product-capabilities.md",
+    "sitemap": "inputs/sitemap.csv",
+    "use_case_taxonomy": "inputs/use-cases.md",
+    "page_skill": ".agents/skills/ojo-solution-pages/SKILL.md",
+    "design_system": "apps/homepage",
+    "seo_rules": "inputs/seo-rules.md"
+  }
+}
