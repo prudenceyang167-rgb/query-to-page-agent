@@ -1,90 +1,156 @@
-# OJO Query-to-Page Agent
+# Query-to-Page Agent
 
-一个面向高意图 SEO 页面批量生产的 Codex Agent/Skill。它把 Query Bank 到 PR-ready 页面之间最耗人工的判断和交付环节串成一个可审计工作流，并用两个 Human Gate 保留关键业务决策。
+把高意图 Query Bank 变成一批可审核、可追踪、可交付的 SEO 页面。Agent 自动完成聚类、意图判断、页面映射、Brief 和 QA；两个 Human Gate 保留“做哪些页”和“是否上线”的最终决定。
 
-> Personal portfolio project by prudenceyang167-rgb. The repository contains only workflow logic and synthetic examples—no private query bank, customer data, credentials, unpublished metrics, or copied product source.
+> Personal portfolio project by prudenceyang167-rgb. 仓库只包含工作流代码与合成示例，不包含公司 Query Bank、客户数据、密钥、未公开指标或复制的产品源码。
 
-## 它解决什么
+## Why this exists
 
-```text
-ICP + Query Bank + Product Evidence + Sitemap
-                    ↓
-        Cluster / Intent / Coverage / Risk
-                    ↓
-            Human Gate 1: 做哪些页
-                    ↓
-         Brief → Page Skill → 3–5 pages
-                    ↓
-        SEO / Conversion / Mobile / Build QA
-                    ↓
-           Human Gate 2: 是否交付
-                    ↓
-                 PR-ready
+单页生产已经不再是最难的问题。真正占用时间的是每页前后的重复判断：这个 Query 是否值得做、是否撞车、该做哪种页面、产品卖点是否有依据、页面能否通过 SEO / Mobile / Conversion / Engineering QA。
+
+这个项目把这些工作串成一个有审计记录的批量生产系统：
+
+```mermaid
+flowchart LR
+  A[ICP + Query Bank + Product Evidence + Sitemap] --> B[DeepSeek: Cluster / Intent / Priority]
+  B --> G1{Human Gate 1}
+  G1 -->|Approve 3–5| C[DeepSeek: Page Briefs]
+  C --> D[OJO Page Skill: Reusable page implementation]
+  D --> E[Automated SEO / Conversion / Engineering QA]
+  E --> G2{Human Gate 2}
+  G2 -->|Approve| F[PR-ready]
 ```
 
-Agent 会输出可追踪的 Query 优先级、Query → Page 映射、完整页面 Brief、批量页面清单、Preview/QA 证据和 MVP 效率指标。它不会替人批准页面方向、产品卖点或最终上线。
+Agent 不会自行批准页面方向、虚构产品证据、绕过 QA、提交 PR 或上线。
 
-## MVP 范围
+## What is implemented
 
-- 一次只处理 3–5 个获批的高意图页面。
-- 支持 `optimize-existing`、`create-use-case`、`create-comparison`、`create-landing`、`create-blog` 五类决策。
-- Gate 1 未通过不能生成页面；Gate 2 有 `Fail` 或必要项 `Not run` 时不能进入 PR-ready。
-- 页面实现通过目标仓库已有的 Page Skill 完成；对 OJO 项目默认使用 `ojo-solution-pages`。
-- PR、合并和上线仍遵守目标仓库自己的权限与发布流程。
+- Query clustering、Search Intent、ICP relevance、Commercial intent、Funnel stage、已有页面覆盖与 Cannibalization risk。
+- `optimize-existing`、`create-use-case`、`create-comparison`、`create-landing`、`create-blog` 页面决策。
+- P0 / P1 / P2 排序，以及严格限制为 3–5 页的 MVP Gate 1 Packet。
+- DeepSeek 驱动的页面 Brief：H1、结构、核心 Copy、能力—收益—证据、CTA、FAQ、内链、Schema、Title 和 Description。
+- 页面 Skill 交接清单与 draft manifest；OJO 项目默认调用 `ojo-solution-pages`，并要求复用现有组件和 IA。
+- SEO、Product / Conversion、Mobile、Component reuse、Build、Type check、CI 和 Performance 的证据化 QA。
+- 双人工 Gate 状态机：缺少必要证据会记为 `Not run`，不会被误判成 `Pass`。
+- MVP 指标定义：单页人工耗时、自动化率、QA Issue、生产周期和上线成功率。
 
-## 仓库结构
+## Two ways to run it
 
-```text
-SKILL.md                         Agent 主工作流
-agents/openai.yaml               Codex 展示与默认调用信息
-references/                      输入、优先级、产物、QA、指标规范
-scripts/workflow_state.py        双 Gate 状态机与 JSON 校验
-assets/templates/                Run config、Query Bank、Page Brief 模板
-examples/synthetic/              不含真实业务数据的演示输入
-tests/                           状态机自动测试
-```
+### 1. As a Codex Skill
 
-## 在 Codex 中使用
-
-把仓库作为 Skill 安装或放到项目可发现的 skills 目录，然后调用：
+安装本仓库 Skill 后调用：
 
 ```text
 Use $ojo-query-to-page-agent to turn this query bank into a gated batch of 3–5 high-intent pages.
 ```
 
-Agent 会先读取八类输入并停在 Gate 1。只有明确批准候选 Cluster 后才会继续生成 Brief 和页面。
+Codex 会读取目标仓库里的页面 Skill、设计系统和工程命令，完成页面代码与 Preview 检查。工作流会在两个 Gate 停下来等待具名 Reviewer。
 
-## 本地验证状态机
+### 2. With the DeepSeek CLI
 
-只依赖 Python 标准库：
+项目只使用 Python 标准库，不需要额外运行时依赖：
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python3 -m pip install -e .
+```
+
+把 DeepSeek 密钥放进本地 shell；如果保存在被 Git 忽略的 `.env.local`，请先把它载入 shell。不要提交真实密钥。默认使用 `deepseek-flash`，也可用 `DEEPSEEK_MODEL` 覆盖。
+
+```bash
+export DEEPSEEK_API_KEY="your-local-key"
+
+q2p analyze \
+  --config /path/to/run-config.json \
+  --run-dir .runs/mvp
+
+q2p gate \
+  --run-dir .runs/mvp \
+  --gate 1 \
+  --decision approve \
+  --reviewer "Prudence"
+
+q2p briefs --run-dir .runs/mvp
+```
+
+页面 Skill 实现完成后，把 `page-manifest.draft.json` 补齐为正式 manifest，删除顶层的 `"draft": true`，并记录每页代码、Preview 与视觉/性能证据：
+
+```bash
+q2p qa \
+  --run-dir .runs/mvp \
+  --manifest .runs/mvp/page-manifest.json
+
+q2p gate \
+  --run-dir .runs/mvp \
+  --gate 2 \
+  --decision approve \
+  --reviewer "Prudence"
+```
+
+Gate 2 存在 `Fail` 或必要项 `Not run` 时，状态机拒绝批准。
+
+### Data boundary
+
+运行 DeepSeek 阶段会把配置中八类输入的文本发送给外部模型。只使用已获准发送到 DeepSeek 的资料，不要把客户数据、密钥、受限源码或未获授权的内部信息放入输入。加载器会跳过常见凭据文件并遮蔽常见 secret 形式，但这不是数据授权的替代品。
+
+## Offline demo
+
+演示数据完全合成，不调用 API：
+
+```bash
+q2p analyze \
+  --config examples/synthetic/config.json \
+  --run-dir .runs/demo \
+  --fixture-json examples/synthetic/prioritization.json
+
+q2p gate --run-dir .runs/demo --gate 1 --decision approve --reviewer "Demo reviewer"
+
+q2p briefs \
+  --run-dir .runs/demo \
+  --fixture-json examples/synthetic/briefs.json
+```
+
+运行结果保存在 `.runs/demo/`，包括输入清单、优先级、两个 Gate Packet、Query → Page Map、Brief、Manifest 和 QA 报告。
+
+## Run config
+
+从 [`assets/templates/run-config.json`](assets/templates/run-config.json) 开始。八类必需输入是：ICP、Query Bank、产品能力证据、已有 Sitemap、Use Case 分类、页面 Skill、Homepage / Design System 和 SEO Rules。
+
+`qa_commands` 必须是参数数组，不经过 shell 执行。例如：
+
+```json
+{
+  "qa_commands": {
+    "build": ["pnpm", "build"],
+    "type-check": ["pnpm", "type-check"],
+    "ci": ["pnpm", "test"]
+  }
+}
+```
+
+## Repository map
+
+```text
+query_to_page_agent/
+  cli.py                 DeepSeek CLI
+  pipeline.py            Analysis, briefs, QA, artifact rendering
+  provider.py            Provider boundary and offline fixture model
+scripts/workflow_state.py Two Human Gates and artifact validation
+SKILL.md                  Codex Agent workflow
+references/               Input, prioritization, QA and metric contracts
+assets/templates/         Reusable run templates
+examples/synthetic/       Safe offline demonstration
+tests/                    State-machine and pipeline tests
+```
+
+## Verification
 
 ```bash
 python3 -m unittest discover -s tests -v
 ```
 
-用合成数据初始化一次演示 Run：
-
-```bash
-python3 scripts/workflow_state.py init \
-  --config examples/synthetic/config.json \
-  --run-dir .runs/demo
-
-python3 scripts/workflow_state.py record-analysis \
-  --run-dir .runs/demo \
-  --analysis examples/synthetic/prioritization.json
-```
-
-查看状态：
-
-```bash
-python3 scripts/workflow_state.py status --run-dir .runs/demo
-```
-
-Gate 决策必须由具名人类 Reviewer 提交。演示数据仅用于校验工作流，不代表真实搜索机会、产品能力或发布建议。
-
-## 10–20 页扩展条件
-
-先完成一个 3–5 页 MVP，并记录单页人工耗时、Agent 自动完成率、QA Issue 数量、生产周期和上线成功率。只有当模板没有系统性失败、人工返工下降且跨页面复用成立时，才新建 10–20 页 Batch。
+扩到 10–20 页前，先完成一次 3–5 页 MVP 并复盘指标。任何重复性的模板、产品证据、路由或 QA Failure 都应该先修复，再放大批量。
 
 ## License
 

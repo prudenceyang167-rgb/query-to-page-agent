@@ -2,3 +2,10 @@ __pycache__/
 *.py[cod]
 .DS_Store
 .runs/
+.env
+.env.*
+!.env.example
+.venv/
+*.egg-info/
+build/
+dist/

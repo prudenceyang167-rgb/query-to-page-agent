@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ojo-query-to-page-agent"
+version = "0.2.0"
+description = "Human-gated DeepSeek agent for turning high-intent query banks into PR-ready page batches."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "prudenceyang167-rgb" }]
+dependencies = []
+
+[project.scripts]
+q2p = "query_to_page_agent.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["query_to_page_agent*", "scripts*"]
+
+[tool.unittest]
+start-directory = "tests"

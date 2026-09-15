@@ -15,6 +15,10 @@ If the configured page skill is `ojo-solution-pages`, read its complete `SKILL.m
 
 Create a run directory outside production source, or under the repository's approved planning-artifact location. Use `scripts/workflow_state.py` to initialize and enforce the two gates when practical. Do not overwrite an existing run.
 
+When the operator selects DeepSeek, use the packaged `q2p` workflow (or `python3 -m query_to_page_agent.cli`) for prioritization, briefs, and QA. It reads `DEEPSEEK_API_KEY` from the local environment. Never request that the operator paste a key into a prompt, print it, copy it into a run artifact, or commit an env file. Default to the configured `DEEPSEEK_MODEL`; do not silently switch providers.
+
+Before a live DeepSeek run, confirm that every configured input is authorized for transfer to that external provider. Do not send customer data, credentials, restricted source, or unrelated internal material. The bundled loader skips common credential files and redacts common secret patterns, but this does not replace the operator's data-classification decision.
+
 ## Run the workflow
 
 Read [references/prioritization-rubric.md](references/prioritization-rubric.md) for the scoring and page-mapping contract, and [references/artifact-contract.md](references/artifact-contract.md) for exact outputs.
@@ -28,6 +32,8 @@ Read [references/prioritization-rubric.md](references/prioritization-rubric.md) 
 7. Create previews and run the checks in [references/qa-rubric.md](references/qa-rubric.md). Classify every check as `Pass`, `Warning`, `Fail`, or `Not run`, with evidence. A missing check is `Not run`, never `Pass`.
 8. Present Gate 2 with page direction, claims, copy, visual previews, CTA paths, QA summary, and unresolved warnings. Do not commit, push, open a PR, merge, deploy, publish, or release until the relevant explicit authorization and repository gates are satisfied.
 9. After Gate 2 approval, prepare the PR using the repository's own contribution process. Treat production release as a separate human decision unless the user explicitly authorized it.
+
+For the packaged CLI, the normal sequence is `q2p analyze`, `q2p gate --gate 1`, `q2p briefs`, page-skill implementation, `q2p qa`, and `q2p gate --gate 2`. A `page-manifest.draft.json` is not QA evidence. Fill its implementation paths, preview URL, and evidence paths, then remove the top-level `draft` flag before QA.
 
 ## Batch invariants
 

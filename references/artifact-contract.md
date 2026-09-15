@@ -10,8 +10,10 @@ run/
 ├── prioritization.json
 ├── gate-1.md
 ├── page-map.md
+├── brief-index.json
 ├── briefs/
 │   └── <page-id>.md
+├── page-manifest.draft.json
 ├── page-manifest.json
 ├── qa/
 │   ├── qa-report.json
@@ -71,6 +73,8 @@ existing_page, brief_path, implementation_paths, preview_url
 ```
 
 The manifest represents the batch scope. Do not silently add pages after Gate 1.
+
+The briefing stage emits `page-manifest.draft.json`. The page-building skill must fill `implementation_paths`, `preview_url`, and optional `evidence_paths`, then remove the top-level `draft` flag. Automated QA refuses a draft manifest.
 
 ## QA report JSON
 

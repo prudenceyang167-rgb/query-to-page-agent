@@ -2,6 +2,11 @@
   "run_name": "YYYY-MM-high-intent-use-cases",
   "batch_size": 3,
   "target_repository": "/absolute/path/to/site-repository",
+  "qa_commands": {
+    "build": ["pnpm", "build"],
+    "type-check": ["pnpm", "type-check"],
+    "ci": ["pnpm", "test"]
+  },
   "inputs": {
     "icp": "inputs/icp.md",
     "query_bank": "inputs/query-bank.csv",

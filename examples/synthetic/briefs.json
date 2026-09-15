@@ -1,0 +1,136 @@
+{
+  "briefs": [
+    {
+      "page_id": "prd-to-ui",
+      "cluster_id": "prd-to-ui",
+      "page_name": "PRD to UI",
+      "target_query": "ai prd to ui generator",
+      "supporting_queries": ["turn prd into ui design"],
+      "search_intent": "Find a product that turns requirements into UI",
+      "funnel_stage": "decision",
+      "icp": "Small product teams",
+      "visitor_decision": "Can this product turn my requirements into an editable UI draft?",
+      "user_pain": "The team loses time translating requirements into a first interface reviewers can react to.",
+      "page_type": "use-case",
+      "action": "create-use-case",
+      "route": "/use-cases/prd-to-ui",
+      "product_truth": {
+        "verified_capabilities": ["Accepts written requirements as project context", "Produces editable interface drafts"],
+        "differentiation": ["Connects source requirements with an editable interface artifact"],
+        "evidence_sources": ["product_capabilities", "use_case_taxonomy"]
+      },
+      "search_metadata": {
+        "h1": "Turn a PRD into an editable UI draft",
+        "title": "AI PRD to UI Generator | OJO",
+        "description": "Give OJO written requirements and create an editable interface draft your product team can review.",
+        "canonical": "/use-cases/prd-to-ui",
+        "robots": "index, follow",
+        "schema": "WebPage"
+      },
+      "conversion": {
+        "primary_cta": {"label": "Start with your PRD", "destination": "/signup"},
+        "secondary_cta": {"label": "See the workflow", "destination": "#workflow"}
+      },
+      "sections": [
+        {"name": "Hero", "goal": "State the job and artifact", "h2": "", "core_copy": "Move from written requirements to an interface draft your team can inspect and edit.", "evidence": "product_capabilities"},
+        {"name": "Workflow", "goal": "Explain the verified mechanism", "h2": "From requirements to a reviewable first UI", "core_copy": "Add the PRD as project context, inspect the generated direction, and refine the editable result.", "evidence": "product_capabilities"}
+      ],
+      "faq": [
+        {"question": "Can I edit the generated UI?", "answer": "The supplied product evidence states that OJO produces editable interface drafts."}
+      ],
+      "internal_links": {"inbound": ["Homepage product workflow section"], "outbound": ["/use-cases/prd-to-prototype", "/signup"]},
+      "assumptions": ["The /signup destination must be verified in the target repository"],
+      "proof_gaps": ["No approved customer proof or performance metric was supplied"],
+      "prohibited_claims": ["Do not claim a specific time saving or production-ready output"],
+      "acceptance_criteria": ["Unique query ownership", "Claims trace to supplied evidence", "Responsive page preview passes QA"]
+    },
+    {
+      "page_id": "prd-to-prototype",
+      "cluster_id": "prd-to-prototype",
+      "page_name": "PRD to Interactive Prototype",
+      "target_query": "prd to interactive prototype",
+      "supporting_queries": [],
+      "search_intent": "Create a reviewable prototype from requirements",
+      "funnel_stage": "decision",
+      "icp": "Small product teams",
+      "visitor_decision": "Can this product create a prototype that stakeholders can review?",
+      "user_pain": "Static requirements make flows and interaction assumptions hard to review.",
+      "page_type": "use-case",
+      "action": "create-use-case",
+      "route": "/use-cases/prd-to-prototype",
+      "product_truth": {
+        "verified_capabilities": ["Accepts written requirements as project context", "Produces a reviewable interactive prototype"],
+        "differentiation": ["Turns requirement context into an interactive artifact for review"],
+        "evidence_sources": ["product_capabilities", "use_case_taxonomy"]
+      },
+      "search_metadata": {
+        "h1": "Turn your PRD into an interactive prototype",
+        "title": "PRD to Interactive Prototype | OJO",
+        "description": "Use written requirements to create a reviewable interactive prototype with OJO.",
+        "canonical": "/use-cases/prd-to-prototype",
+        "robots": "index, follow",
+        "schema": "WebPage"
+      },
+      "conversion": {
+        "primary_cta": {"label": "Create a prototype", "destination": "/signup"},
+        "secondary_cta": {"label": "See what gets produced", "destination": "#output"}
+      },
+      "sections": [
+        {"name": "Hero", "goal": "Lead with the interactive artifact", "h2": "", "core_copy": "Give reviewers something they can move through, not another static requirements handoff.", "evidence": "product_capabilities"},
+        {"name": "Output", "goal": "Make the result concrete", "h2": "A prototype built for review", "core_copy": "Use the written requirements as context for a reviewable interactive prototype.", "evidence": "product_capabilities"}
+      ],
+      "faq": [
+        {"question": "What input does OJO use?", "answer": "The supplied evidence supports written requirements as project context."}
+      ],
+      "internal_links": {"inbound": ["Homepage workflow section"], "outbound": ["/use-cases/prd-to-ui", "/signup"]},
+      "assumptions": ["The /signup destination must be verified in the target repository"],
+      "proof_gaps": ["Prototype fidelity and supported interaction types were not supplied"],
+      "prohibited_claims": ["Do not claim every interaction type is supported"],
+      "acceptance_criteria": ["Distinct from the UI draft page", "Prototype claim remains within supplied evidence", "Responsive page preview passes QA"]
+    },
+    {
+      "page_id": "requirements-analysis",
+      "cluster_id": "requirements-analysis",
+      "page_name": "AI Product Requirement Analysis",
+      "target_query": "ai product requirement analysis",
+      "supporting_queries": [],
+      "search_intent": "Use AI to structure product requirements",
+      "funnel_stage": "consideration",
+      "icp": "Small product teams",
+      "visitor_decision": "Can this product help structure requirement questions before interface work?",
+      "user_pain": "Unresolved requirement questions create rework after interface generation begins.",
+      "page_type": "use-case",
+      "action": "create-use-case",
+      "route": "/use-cases/requirement-analysis",
+      "product_truth": {
+        "verified_capabilities": ["Helps structure requirement questions before interface generation"],
+        "differentiation": ["Keeps requirement clarification connected to downstream interface work"],
+        "evidence_sources": ["product_capabilities", "use_case_taxonomy"]
+      },
+      "search_metadata": {
+        "h1": "Structure product requirements before UI work begins",
+        "title": "AI Product Requirement Analysis | OJO",
+        "description": "Use OJO to structure requirement questions before moving into interface generation.",
+        "canonical": "/use-cases/requirement-analysis",
+        "robots": "index, follow",
+        "schema": "WebPage"
+      },
+      "conversion": {
+        "primary_cta": {"label": "Analyze your requirements", "destination": "/signup"},
+        "secondary_cta": {"label": "Follow the workflow", "destination": "#workflow"}
+      },
+      "sections": [
+        {"name": "Hero", "goal": "Frame the upstream decision", "h2": "", "core_copy": "Surface and structure requirement questions before interface generation begins.", "evidence": "product_capabilities"},
+        {"name": "Workflow", "goal": "Connect analysis to the next artifact", "h2": "Clarify, then create", "core_copy": "Use structured requirement questions as context for the interface work that follows.", "evidence": "product_capabilities"}
+      ],
+      "faq": [
+        {"question": "Does this replace product judgment?", "answer": "No. The supported claim is that OJO helps structure requirement questions; product decisions remain with the team."}
+      ],
+      "internal_links": {"inbound": ["Homepage product context section"], "outbound": ["/use-cases/prd-to-ui", "/signup"]},
+      "assumptions": ["The /signup destination must be verified in the target repository"],
+      "proof_gaps": ["No supported claim for automated prioritization or research validation was supplied"],
+      "prohibited_claims": ["Do not claim OJO validates market demand or makes product decisions"],
+      "acceptance_criteria": ["Page focuses on requirement analysis", "Claims stay conservative", "Responsive page preview passes QA"]
+    }
+  ]
+}
