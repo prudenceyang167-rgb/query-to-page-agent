@@ -113,6 +113,18 @@ q2p briefs \
 
 运行结果保存在 `.runs/demo/`，包括输入清单、优先级、两个 Gate Packet、Query → Page Map、Brief、Manifest 和 QA 报告。
 
+## Deploy the portfolio to Vercel
+
+仓库包含零依赖 WSGI 入口 `app.py`，并通过 `pyproject.toml` 的 `[tool.vercel]` 明确声明 `app:app`。直接在 Vercel 导入 GitHub 仓库即可，不需要填写 Build Command 或 Output Directory。
+
+部署后包含：
+
+- `/`：响应式项目介绍与可交互的三页 synthetic demo；
+- `/api/health`：部署健康状态；
+- `/api/demo`：只读合成数据，不调用 DeepSeek、不消耗 API 额度。
+
+公开站点不会调用或暴露 `DEEPSEEK_API_KEY`。真实 Query Bank 仍通过本地 CLI 运行，避免把内部资料放进公开请求。
+
 ## Run config
 
 从 [`assets/templates/run-config.json`](assets/templates/run-config.json) 开始。八类必需输入是：ICP、Query Bank、产品能力证据、已有 Sitemap、Use Case 分类、页面 Skill、Homepage / Design System 和 SEO Rules。
@@ -142,6 +154,8 @@ references/               Input, prioritization, QA and metric contracts
 assets/templates/         Reusable run templates
 examples/synthetic/       Safe offline demonstration
 tests/                    State-machine and pipeline tests
+app.py                    Vercel WSGI portfolio entrypoint
+vercel.json               Serverless function bundle configuration
 ```
 
 ## Verification

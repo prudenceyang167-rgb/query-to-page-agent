@@ -18,5 +18,8 @@ q2p = "query_to_page_agent.cli:main"
 [tool.setuptools.packages.find]
 include = ["query_to_page_agent*", "scripts*"]
 
+[tool.vercel]
+entrypoint = "app:app"
+
 [tool.unittest]
 start-directory = "tests"
