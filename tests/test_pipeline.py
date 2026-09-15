@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from query_to_page_agent.pipeline import PipelineError, analyze, generate_briefs, read_source, run_qa
+from query_to_page_agent.pipeline import PipelineError, analyze, generate_briefs, read_source, run_qa, validate_briefs
 from query_to_page_agent.provider import FixtureClient
 from scripts import workflow_state as workflow
 
@@ -144,6 +144,49 @@ class PipelineTest(unittest.TestCase):
         self.assertEqual(state["gates"]["gate_2"]["status"], "Pending")
         self.assertIn("prd-to-ui:engineering:build:Not run", state["qa_blockers"])
         self.assertTrue((self.run_dir / "gate-2.md").exists())
+
+    def test_brief_rejects_path_escape_and_malformed_nested_data(self) -> None:
+        original = workflow.load_json(EXAMPLE / "briefs.json")
+        approved = {item["cluster_id"] for item in original["briefs"]}
+        mutations = (
+            ("page_id", "../outside-run"),
+            ("route", "/use-cases/%2e%2e/outside"),
+            ("product_truth", None),
+            ("search_metadata", []),
+            ("sections", ["not an object"]),
+            ("faq", [{"question": "Question", "answer": None}]),
+        )
+        for field, value in mutations:
+            with self.subTest(field=field):
+                payload = json.loads(json.dumps(original))
+                payload["briefs"][0][field] = value
+                with self.assertRaises(PipelineError):
+                    validate_briefs(payload, approved)
+
+    def test_briefs_preserve_approved_action_and_existing_route(self) -> None:
+        payload = workflow.load_json(EXAMPLE / "briefs.json")
+        analysis = workflow.load_json(EXAMPLE / "prioritization.json")
+        mapping = {item["cluster_id"]: item for item in analysis["clusters"] if item["selected"]}
+        cid = payload["briefs"][0]["cluster_id"]
+        mapping[cid]["recommendation"] = "optimize-existing"
+        mapping[cid]["existing_page"] = "/existing-owner"
+        with self.assertRaisesRegex(PipelineError, "approved recommendation"):
+            validate_briefs(payload, set(mapping), mapping)
+        payload["briefs"][0]["action"] = "optimize-existing"
+        with self.assertRaisesRegex(PipelineError, "existing page route"):
+            validate_briefs(payload, set(mapping), mapping)
+
+    def test_source_edits_invalidate_gate_1(self) -> None:
+        analyze(EXAMPLE / "config.json", self.run_dir, FixtureClient(EXAMPLE / "prioritization.json"))
+        self.approve_gate_1()
+        analysis = workflow.load_json(self.run_dir / "prioritization.json")
+        analysis["clusters"][0]["rationale"] = "Changed after review"
+        workflow.write_json(self.run_dir / "prioritization.json", analysis)
+        with self.assertRaisesRegex(PipelineError, "Gate 1"):
+            generate_briefs(self.run_dir, FixtureClient(EXAMPLE / "briefs.json"))
+        state = workflow.load_state(self.run_dir)
+        self.assertEqual(state["gates"]["gate_1"]["status"], "Locked")
+        self.assertEqual(state["approved_cluster_ids"], [])
 
 
 if __name__ == "__main__":

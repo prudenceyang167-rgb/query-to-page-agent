@@ -28,8 +28,8 @@ class DeepSeekClient:
     api_key: str
     model: str = "deepseek-flash"
     base_url: str = "https://api.deepseek.com"
-    timeout_seconds: int = 180
-    retries: int = 2
+    timeout_seconds: int = 90
+    retries: int = 1
 
     @classmethod
     def from_env(cls) -> "DeepSeekClient":
@@ -57,6 +57,7 @@ class DeepSeekClient:
             ],
             "response_format": {"type": "json_object"},
             "temperature": 0.1,
+            "thinking": {"type": "disabled"},
             "max_tokens": max_tokens,
         }
         request = urllib.request.Request(
@@ -74,6 +75,8 @@ class DeepSeekClient:
             try:
                 with urllib.request.urlopen(request, timeout=self.timeout_seconds) as response:
                     body = json.loads(response.read().decode("utf-8"))
+                if body.get("choices", [{}])[0].get("finish_reason") == "length":
+                    raise ProviderError("DeepSeek output was truncated. Reduce the input or retry this page.")
                 content = body["choices"][0]["message"]["content"]
                 if not isinstance(content, str) or not content.strip():
                     raise ProviderError("DeepSeek returned empty content.")
@@ -82,8 +85,8 @@ class DeepSeekClient:
                     raise ProviderError("DeepSeek returned JSON that is not an object.")
                 return value
             except urllib.error.HTTPError as exc:
-                detail = exc.read().decode("utf-8", errors="replace")[:800]
-                last_error = ProviderError(f"DeepSeek HTTP {exc.code}: {detail}")
+                messages = {401: "API key is invalid", 402: "Insufficient DeepSeek balance", 429: "Rate limit reached; retry shortly"}
+                last_error = ProviderError(f"DeepSeek HTTP {exc.code}: {messages.get(exc.code, 'Provider temporarily unavailable')}")
                 if exc.code not in {408, 429, 500, 502, 503, 504}:
                     break
             except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, KeyError) as exc:

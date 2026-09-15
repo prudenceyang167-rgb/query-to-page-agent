@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ojo-query-to-page-agent"
-version = "0.2.0"
+version = "0.3.0"
 description = "Human-gated DeepSeek agent for turning high-intent query banks into PR-ready page batches."
 readme = "README.md"
 requires-python = ">=3.9"

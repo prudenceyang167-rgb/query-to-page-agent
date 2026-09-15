@@ -99,7 +99,7 @@ class WorkflowStateTest(unittest.TestCase):
     def initialize(self) -> None:
         self.call("init", "--config", str(self.config), "--run-dir", str(self.run_dir))
 
-    def test_happy_path_reaches_pr_ready(self) -> None:
+    def _reach_pr_ready(self) -> None:
         self.initialize()
         analysis = self.write_analysis()
         self.call("record-analysis", "--run-dir", str(self.run_dir), "--analysis", str(analysis))
@@ -112,7 +112,7 @@ class WorkflowStateTest(unittest.TestCase):
             "--decision",
             "approve",
             "--reviewer",
-            "prudenceyang167-rgb",
+            "Portfolio owner",
         )
         pages = {
             "pages": [
@@ -163,9 +163,12 @@ class WorkflowStateTest(unittest.TestCase):
             "--decision",
             "approve",
             "--reviewer",
-            "prudenceyang167-rgb",
+            "Portfolio owner",
         )
         self.assertEqual(json.loads(result.stdout)["stage"], "pr_ready")
+
+    def test_happy_path_reaches_pr_ready(self) -> None:
+        self._reach_pr_ready()
 
     def test_gate_1_cannot_open_without_analysis(self) -> None:
         self.initialize()
@@ -178,7 +181,7 @@ class WorkflowStateTest(unittest.TestCase):
             "--decision",
             "approve",
             "--reviewer",
-            "prudenceyang167-rgb",
+            "Portfolio owner",
             ok=False,
         )
         self.assertEqual(result.returncode, 2)
@@ -217,6 +220,64 @@ class WorkflowStateTest(unittest.TestCase):
         blockers = WORKFLOW.validate_qa(report, {"p1"})
         self.assertIn("p1:engineering:build:Fail", blockers)
         self.assertIn("p1:seo:title:Not run", blockers)
+
+    def test_mandatory_checks_cannot_be_marked_optional(self) -> None:
+        checks = [
+            {"category": category, "name": name, "status": "Not run", "evidence": "", "required": False}
+            for category, name in WORKFLOW.REQUIRED_QA_CHECKS
+        ]
+        blockers = WORKFLOW.validate_qa({"pages": [{"page_id": "p1", "checks": checks}]}, {"p1"})
+        self.assertEqual(len(blockers), len(WORKFLOW.REQUIRED_QA_CHECKS))
+        checks[0]["status"] = "Pass"
+        blockers = WORKFLOW.validate_qa({"pages": [{"page_id": "p1", "checks": checks}]}, {"p1"})
+        self.assertTrue(any(item.endswith(":Missing evidence") for item in blockers))
+
+    def test_query_coverage_rejects_missing_and_duplicate_members(self) -> None:
+        analysis = json.loads(self.write_analysis().read_text())
+        with self.assertRaisesRegex(WORKFLOW.WorkflowError, "every input query"):
+            WORKFLOW.validate_analysis(analysis, 3, {"query 1", "query 2", "query 3", "query 4", "missing"})
+        analysis["clusters"][1]["member_queries"].append("QUERY 1")
+        with self.assertRaisesRegex(WORKFLOW.WorkflowError, "more than once"):
+            WORKFLOW.validate_analysis(analysis, 3)
+
+    def test_pending_gate_rejects_changed_review_contents(self) -> None:
+        self.initialize()
+        analysis = self.write_analysis()
+        self.call("record-analysis", "--run-dir", str(self.run_dir), "--analysis", str(analysis))
+        value = json.loads(analysis.read_text())
+        value["clusters"][0]["rationale"] = "Changed while awaiting review"
+        analysis.write_text(json.dumps(value))
+        result = self.call("gate", "--run-dir", str(self.run_dir), "--gate", "1", "--decision", "approve", "--reviewer", "Portfolio owner", ok=False)
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("review contents changed", result.stderr)
+
+    def test_manifest_replacement_invalidates_release_approval(self) -> None:
+        self._reach_pr_ready()
+        self.call("record-pages", "--run-dir", str(self.run_dir), "--manifest", str(self.base / "page-manifest.json"))
+        state = json.loads(self.call("status", "--run-dir", str(self.run_dir)).stdout)
+        self.assertEqual(state["gates"]["gate_2"]["status"], "Locked")
+        self.assertEqual(state["stage"], "implementation")
+
+    def test_post_approval_file_edit_invalidates_release(self) -> None:
+        self._reach_pr_ready()
+        manifest_path = self.base / "page-manifest.json"
+        value = json.loads(manifest_path.read_text())
+        value["pages"][0]["preview_url"] = "https://different-preview.example"
+        manifest_path.write_text(json.dumps(value))
+        state = json.loads(self.call("status", "--run-dir", str(self.run_dir)).stdout)
+        self.assertEqual(state["gates"]["gate_2"]["status"], "Locked")
+        self.assertEqual(state["stage"], "implementation")
+
+    def test_qa_cannot_approve_a_changed_mapping(self) -> None:
+        self._reach_pr_ready()
+        manifest_path = self.base / "page-manifest.json"
+        value = json.loads(manifest_path.read_text())
+        value["pages"][0]["action"] = "create-blog"
+        value["pages"][0]["page_type"] = "blog"
+        manifest_path.write_text(json.dumps(value))
+        result = self.call("record-qa", "--run-dir", str(self.run_dir), "--report", str(self.base / "qa.json"), ok=False)
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("approved recommendation", result.stderr)
 
 
 if __name__ == "__main__":

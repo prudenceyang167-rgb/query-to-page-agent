@@ -34,7 +34,7 @@ TEXT_SUFFIXES = {
     ".yaml",
     ".yml",
 }
-SKIP_DIRS = {".build", ".git", ".next", ".runs", "dist", "node_modules"}
+SKIP_DIRS = {".build", ".git", ".next", ".runs", ".venv", "__pycache__", "dist", "node_modules"}
 SENSITIVE_NAMES = {
     ".env",
     ".env.local",
@@ -224,7 +224,7 @@ def analyze(config_path: Path, run_dir: Path, model: JsonModel) -> dict[str, Any
         f"{context}"
     )
     result = model.complete_json(system=ANALYSIS_SYSTEM, user=user, max_tokens=20_000)
-    workflow.validate_analysis(result, state["batch_size"])
+    workflow.validate_analysis(result, state["batch_size"], workflow.input_queries(config))
     analysis_path = run_dir / "prioritization.json"
     _write_json(analysis_path, result)
     workflow.record_analysis(
@@ -293,7 +293,7 @@ BRIEF_REQUIRED_FIELDS = {
 }
 
 
-def validate_briefs(value: dict[str, Any], approved: set[str]) -> list[dict[str, Any]]:
+def validate_briefs(value: dict[str, Any], approved: set[str], approved_mapping: dict[str, dict[str, Any]] | None = None) -> list[dict[str, Any]]:
     briefs = value.get("briefs")
     if not isinstance(briefs, list) or not briefs:
         raise PipelineError("Brief response must contain a non-empty briefs array")
@@ -311,16 +311,90 @@ def validate_briefs(value: dict[str, Any], approved: set[str]) -> list[dict[str,
         route = brief["route"]
         if not all(isinstance(item, str) and item.strip() for item in (page_id, cluster_id, route)):
             raise PipelineError(f"briefs[{index}] requires page_id, cluster_id, and route")
-        if page_id in ids or cluster_id in cluster_ids or route in routes:
+        try:
+            workflow.require_safe_id(page_id, "page_id")
+            workflow.require_safe_id(cluster_id, "cluster_id")
+            normalized_route = workflow.route_key(route)
+        except workflow.WorkflowError as exc:
+            raise PipelineError(str(exc)) from exc
+        if page_id in ids or cluster_id in cluster_ids or normalized_route in routes:
             raise PipelineError("Brief page IDs, cluster IDs, and routes must be unique")
+        text_fields = {"page_name", "target_query", "search_intent", "funnel_stage", "icp", "visitor_decision", "user_pain", "page_type", "action"}
+        for name in text_fields:
+            _require_text(brief[name], f"{page_id}.{name}")
+        if brief["action"] not in workflow.ALLOWED_RECOMMENDATIONS:
+            raise PipelineError(f"{page_id}.action is invalid")
+        if brief["page_type"] not in {"use-case", "comparison", "landing", "blog"}:
+            raise PipelineError(f"{page_id}.page_type is invalid")
+        if brief["funnel_stage"] not in {"awareness", "consideration", "decision"}:
+            raise PipelineError(f"{page_id}.funnel_stage is invalid")
+        for name in ("supporting_queries", "assumptions", "proof_gaps", "prohibited_claims", "acceptance_criteria"):
+            _require_text_list(brief[name], f"{page_id}.{name}")
+        for name, children in {
+            "product_truth": ("verified_capabilities", "differentiation", "evidence_sources"),
+            "internal_links": ("inbound", "outbound"),
+        }.items():
+            _require_object(brief[name], f"{page_id}.{name}")
+            for child in children:
+                _require_text_list(brief[name].get(child), f"{page_id}.{name}.{child}")
+        seo = brief["search_metadata"]
+        _require_object(seo, f"{page_id}.search_metadata")
+        for name in ("h1", "title", "description", "canonical", "robots", "schema"):
+            _require_text(seo.get(name), f"{page_id}.search_metadata.{name}")
+        conversion = brief["conversion"]
+        _require_object(conversion, f"{page_id}.conversion")
+        for name in ("primary_cta", "secondary_cta"):
+            cta = conversion.get(name)
+            _require_object(cta, f"{page_id}.conversion.{name}")
+            _require_text(cta.get("label"), f"{page_id}.{name}.label")
+            _require_text(cta.get("destination"), f"{page_id}.{name}.destination")
+            destination = cta["destination"]
+            if not destination.startswith(("/", "#", "https://", "http://")) or destination.startswith("//") or "\\" in destination or any(ord(char) < 32 for char in destination):
+                raise PipelineError(f"{page_id}.{name}.destination must be a safe web URL or local path")
+        if not isinstance(brief["sections"], list) or not brief["sections"]:
+            raise PipelineError(f"{page_id}.sections must be a non-empty array")
+        for section in brief["sections"]:
+            _require_object(section, f"{page_id}.sections item")
+            for name in ("name", "goal", "core_copy", "evidence"):
+                _require_text(section.get(name), f"{page_id}.section.{name}")
+            if not isinstance(section.get("h2"), str):
+                raise PipelineError(f"{page_id}.section.h2 must be text")
+        if not isinstance(brief["faq"], list):
+            raise PipelineError(f"{page_id}.faq must be an array")
+        for faq in brief["faq"]:
+            _require_object(faq, f"{page_id}.faq item")
+            for name in ("question", "answer"):
+                _require_text(faq.get(name), f"{page_id}.faq.{name}")
+        if approved_mapping is not None:
+            if cluster_id not in approved_mapping:
+                raise PipelineError(f"Unapproved cluster: {cluster_id}")
+            try:
+                workflow.validate_mapping(brief, approved_mapping[cluster_id])
+            except workflow.WorkflowError as exc:
+                raise PipelineError(str(exc)) from exc
         ids.add(page_id)
         cluster_ids.add(cluster_id)
-        routes.add(route)
+        routes.add(normalized_route)
     if cluster_ids != approved:
         raise PipelineError(
             f"Brief clusters must match Gate 1: approved={sorted(approved)}, briefs={sorted(cluster_ids)}"
         )
     return briefs
+
+
+def _require_object(value: Any, label: str) -> None:
+    if not isinstance(value, dict):
+        raise PipelineError(f"{label} must be an object")
+
+
+def _require_text(value: Any, label: str) -> None:
+    if not isinstance(value, str) or not value.strip():
+        raise PipelineError(f"{label} must be non-empty text")
+
+
+def _require_text_list(value: Any, label: str) -> None:
+    if not isinstance(value, list) or not all(isinstance(item, str) and item.strip() for item in value):
+        raise PipelineError(f"{label} must be a string array")
 
 
 def generate_briefs(run_dir: Path, model: JsonModel) -> dict[str, Any]:
@@ -340,7 +414,13 @@ def generate_briefs(run_dir: Path, model: JsonModel) -> dict[str, Any]:
         f"{json.dumps(selected, ensure_ascii=False, indent=2)}\n{context}"
     )
     result = model.complete_json(system=BRIEF_SYSTEM, user=user, max_tokens=28_000)
-    briefs = validate_briefs(result, approved)
+    briefs = validate_briefs(result, approved, {item["cluster_id"]: item for item in selected})
+    workflow.invalidate_gate_2(state)
+    state["page_ids"] = []
+    state["stage"] = "briefing"
+    for name in ("page_manifest", "qa_report", "gate_2_packet"):
+        state["artifacts"].pop(name, None)
+    workflow.save_state(run_dir, state)
     briefs_dir = run_dir / "briefs"
     index: dict[str, Any] = {"briefs": []}
     for brief in briefs:
@@ -509,7 +589,7 @@ def draft_manifest(briefs: list[dict[str, Any]]) -> dict[str, Any]:
                 "page_type": brief["page_type"],
                 "action": brief["action"],
                 "route": brief["route"],
-                "existing_page": "",
+                "existing_page": brief["route"] if brief["action"] == "optimize-existing" else "",
                 "brief_path": f"briefs/{brief['page_id']}.md",
                 "implementation_paths": [],
                 "preview_url": "",
@@ -586,7 +666,7 @@ def run_qa(run_dir: Path, manifest_path: Path, model: JsonModel) -> dict[str, An
     if manifest.get("draft") is True:
         raise PipelineError("Refusing QA on a draft manifest; fill implementation and preview evidence first")
     approved = set(state["approved_cluster_ids"])
-    page_ids = workflow.validate_page_manifest(manifest, approved)
+    page_ids = workflow.validate_page_manifest(manifest, approved, workflow.approved_mapping(run_dir, state))
     config = load_run_config(run_dir)
     target = Path(config["resolved"]["target_repository"])
     command_results = _run_qa_commands(config, target)
@@ -599,10 +679,9 @@ def run_qa(run_dir: Path, manifest_path: Path, model: JsonModel) -> dict[str, An
     report = model.complete_json(system=QA_SYSTEM, user=user, max_tokens=28_000)
     _apply_command_truth(report, command_results)
     workflow.validate_qa(report, set(page_ids))
-    if not state["page_ids"]:
-        workflow.record_pages(
-            argparse.Namespace(run_dir=str(run_dir), manifest=str(manifest_path))
-        )
+    workflow.record_pages(
+        argparse.Namespace(run_dir=str(run_dir), manifest=str(manifest_path))
+    )
     report_path = run_dir / "qa" / "qa-report.json"
     _write_json(report_path, report)
     state = workflow.record_qa(
